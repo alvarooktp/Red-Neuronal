@@ -8,19 +8,17 @@
 #include <cmath>
 using namespace std;
 const int N = 784;//input
-const int DATA = 600;
+const int DATA = 3;
 const int M = 10;//output
 const double eps = 0.000000001;//se puede asi?
 
 //Funciones prototipos
-void getFromFile(char * archivo,double x[][N],double *clasif );
-void printPosX(double x[][N],double *clasif ,int pos);
-void getRands(int *posicion);
+void getFromFile(char * archivo,double **x,double *clasif );
+void printPosX(double **x,double *clasif ,int pos);
+void getRands(int *posicion,int tam);
 void randTheta(double **thetas, int long1, int long2);
-double getH(int *posicionRands,double *theta, double *entrada, int tamEntrada);
-void ForwardPropagation(double **theta, double *entrada, int tamEntrada, double *neuronasSigCapa,int numNeuronas);
-
-
+double getH(int *posicionRands,double *theta, double **entrada,int capaActual);
+void ForwardPropagation(double **theta, double **entrada, int tamEntrada, double *neuronasSigCapa,int numNeuronas);
 int main(int argc, char *argv[]) {
 	if (argc < 2){
     cerr << "Faltan Parámetros:\n\n\tUso: test <Archivo a leer>\n\n";
@@ -28,9 +26,14 @@ int main(int argc, char *argv[]) {
   }
 
 	srand(time(NULL));
-	double x[DATA][N];
+
+	double **x = NULL;//[DATA][N];
+	x = new double *[DATA];
+	for (int pos = 0; pos < DATA;pos++)
+		x[pos] = new double [N];
 
 	double clasif[DATA];
+
 	getFromFile(argv[1],x,clasif);//proceder a leer del archivo
 
   //Random thetas
@@ -61,16 +64,25 @@ int main(int argc, char *argv[]) {
 	double *neuronas1 = NULL;
 	double *neuronas2 = NULL;
 	double *salida = NULL;
-
+	// for (int r=1;r<DATA+1;r++)
+	// 	printPosX(x,clasif ,r);
 	neuronas1 = new double [M*r*r]; //de la capa 1
 	neuronas2 = new double [N*r]; //de la capa 2
 	salida = new double [N];
 
   //inicializa thetas random
 	randTheta(thetas1, N, M*r*r +1);
+	for(int pos = 0; pos<N;pos++)
+		cout<<"thetas1[pos][0] "<<thetas1[pos][0]<<endl;
+	cout<<"Cantidad de elementos en thetas1[0] "<<N<<endl;
 	randTheta(thetas2, M*r*r + 1, M*r +1);
 	randTheta(thetas3, M*r + 1, M);
-	ForwardPropagation(thetas1, (x[DATA]),DATA, neuronas1, M*r*r);
+
+	ForwardPropagation(thetas1, x,DATA, neuronas1, M*r*r);
+
+	for (int pos = 0; pos < DATA;pos++)
+		 delete[] x[pos];
+	delete[] x;
 
 	for (int pos = 0; pos < N;pos++)
 		 delete[] thetas1[pos];
@@ -87,8 +99,9 @@ int main(int argc, char *argv[]) {
 }
 
 
-//Fucniones usadas
-void getFromFile(char * archivo,double x[][N],double *clasif ){
+//Funciones usadas
+
+void getFromFile(char * archivo,double **x,double *clasif ){
   string line;
   ifstream myfile (archivo);
 	int j=0,i=0;
@@ -97,7 +110,7 @@ void getFromFile(char * archivo,double x[][N],double *clasif ){
       std::stringstream   data(line);
 			for (j = 0;j<N;j++){
 				data >> x[i][j];
-				x[i][j]/=255;
+				// x[i][j]/=255;
 			}
 			data>>clasif[i];
       i++;
@@ -108,10 +121,10 @@ void getFromFile(char * archivo,double x[][N],double *clasif ){
   else cout << "Unable to open file";
 }
 
-void printPosX(double x[][N],double *clasif ,int pos){
+void printPosX(double **x,double *clasif ,int pos){
 	const int miPos = pos -1;
 	for (int j = 0; j<N;j++)
-		//cout<<x[miPos][j]<<", ";
+		cout<<x[miPos][j]<<", ";
 	cout<<clasif[miPos]<<endl;
 }
 
@@ -125,16 +138,16 @@ void randTheta(double **thetas, int long1, int long2){
 	cout<<i*j<<endl;
 }
 
-void getRands(int *posicion){
+void getRands(int *posicion,int tam){
 	int*arreglo = NULL;
-	arreglo = new int[DATA];
-	for(int i=0; i<DATA; i++){
+	arreglo = new int[tam];
+	for(int i=0; i<tam; i++){
 		arreglo[i]=i;
 		posicion[i]=-1;
 	}
 
-	for(int i=0; i<DATA; i++){
-		int num=rand()%(DATA);
+	for(int i=0; i<tam; i++){
+		int num=rand()%(tam);
 		if(posicion[num]==-1){
 			posicion[num] = arreglo[i];
 		}else{
@@ -145,8 +158,8 @@ void getRands(int *posicion){
 				do{
 						k = k + pow(-1,potencia);
 						if(k==-1)
-							k=DATA-1;
-						if(k==DATA+1)
+							k=tam-1;
+						if(k==tam+1)
 							k=0;
 						if(posicion[k]==-1){
 							asignado = 1;
@@ -155,37 +168,41 @@ void getRands(int *posicion){
 				}while(asignado==0);
 		}
 	}
-
+	for(int i = 0; i<tam;i++){
+	cout<<posicion[i]<<endl;}
 	delete[] arreglo;
 }
-double getH(int *posicionRands,double *theta, double *entrada, int tamEntrada){
+double getH(int *posicionRands,double *theta, double **entrada, int capaActual){
   double H = 0.0;
 	double Z = theta[0];
 
-	for (int pos = 0; pos < tamEntrada ;pos++){
-		Z += entrada[posicionRands[pos]] * theta [posicionRands[pos+1]];
-		cout<<"entreeeeeeeeeeee "<< endl;
+	for (int pos = 0; pos < N;pos++){
+		// cout<<"ANTES DE ENTRADA =  "<<pos<<endl;
+		Z += entrada[capaActual][posicionRands[pos]] ;
+		// cout<<"ANTES DE THETA =  "<<pos<<endl;
+		Z+= theta [posicionRands[pos+1]];//x[mantener][iterar]
 	}
   H = 1.0/(1.0+exp(-Z));
-  cout<<"H = "<<H<<" tamEntrada "<<tamEntrada<< endl;
+  // cout<<"H = "<<H<<" tamEntrada "<<tamEntrada<< endl;
   return H;
 }
 // ForwardPropagation() funciona para una unica capa indicado por neuronasSigCapa
-void ForwardPropagation(double **theta, double *entrada, int tamEntrada, double *neuronasSigCapa,int numNeuronas){
+void ForwardPropagation(double **theta, double **entrada, int tamEntrada, double *neuronasSigCapa,int numNeuronas){
 	int *posicionRands = NULL;
+	int pos = 0,capaActual = 0;
 	posicionRands = new int[tamEntrada];
-	getRands(posicionRands);
+	getRands(posicionRands,tamEntrada);
 
 	double *ptrTheta = NULL;//*ptrEntrada = NULL;
 	int capaActualTheta = 0;
 
-	for (int pos = 0; pos < numNeuronas;pos++){
+	for (pos = 0; pos < numNeuronas;pos++){
 		ptrTheta = theta[capaActualTheta];
-		cout<<"entre a forward "<<pos<<endl;
 		// ptrEntrada = entrada[capaActualTheta];
-		neuronasSigCapa[pos] = getH(posicionRands,ptrTheta,entrada,tamEntrada);
+		neuronasSigCapa[pos] = getH(posicionRands,ptrTheta,entrada,capaActualTheta);
 		capaActualTheta++;
 	}
+	cout<<"Neuronas en la capa "<<pos<<" Cantidad de caracteristicas "<<N<<endl;
 	// Liberación de memoria
 	delete[] posicionRands;
 }
