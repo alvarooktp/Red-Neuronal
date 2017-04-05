@@ -17,11 +17,11 @@ void getFromFile(char * archivo,double **x,double *clasif );
 void printPosX(double **x,double *clasif ,int pos);
 void getRands(int *posicion,int tam);
 void randTheta(double **thetas, int long1, int long2);
-double getH(double **theta, double *entrada,int capaActual);
+double getH(double **theta, double *entrada,int capaActual,int numNeuronas);
 void ForwardCapa(double **theta, double *entrada, double *neuronasSigCapa,int numNeuronas);
 // void ForwardPropagation(double **theta1,double **theta2,double **theta3,int *cantidadNeuronasCapa,double **entrada,int *posicionRands);
 double Cost(double **theta,double *entrada,int capaActualTheta,double clasif);
-void ParameterVector(double **theta,double *entrada,int capaActualTheta,double *clasif);
+void ParameterVector(double **theta,double *entrada,double *clasif, int numNeuAct, int numNeuPrev);
 
 void BackwardCapa(void);
 int main(int argc, char *argv[]) {
@@ -79,7 +79,6 @@ int main(int argc, char *argv[]) {
 	randTheta(thetas1, N, M*r*r +1);
 	// for(int pos = 0; pos<N;pos++)
 	// 	cout<<"thetas1[pos][0] "<<thetas1[pos][0]<<endl;
-	cout<<"Cantidad de elementos en thetas1[0] "<<N<<endl;
 	randTheta(thetas2, M*r*r + 1, M*r +1);
 	randTheta(thetas3, M*r + 1, M);
 
@@ -87,11 +86,13 @@ int main(int argc, char *argv[]) {
 	posicionRands = new int[DATA];
 	getRands(posicionRands,DATA);
 	cout<<"posicionRands[0] "<<posicionRands[0]<<endl;
-
+	cout<<"Primer ForwardCapa tiene neuronas"<<endl;
 	ForwardCapa(thetas1, x[posicionRands[0]], neuronas1, M*r*r);
+	cout<<"segundo ForwardCapa"<<endl;
 	ForwardCapa(thetas2, x[posicionRands[0]], neuronas2,M*r);
+	cout<<"ultimo ForwardCapa"<<endl;
 	ForwardCapa(thetas3, x[posicionRands[0]], salida, M);
-
+//el back poner clasif igual rand
 
 	for (int pos = 0; pos < M;pos++){
 		cout<<"Salida "<<salida[pos]<<endl;
@@ -195,19 +196,18 @@ void getRands(int *posicion,int tam){
 	cout<<posicion[i]<<endl<<endl;}
 	delete[] arreglo;
 }
-double getH(double **theta, double *entrada, int capaActual){
+double getH(double **theta, double *entrada, int capaActual,int numNeuronas){
   double H = 0.0;
 	double Z = theta[0][capaActual];
-
-	for (int position = 0; position < N;position++){
-		// cout<<"  "<<endl;
-		// Z += entrada[capaActual][0] ;
+	// cout<<"H = "<<H<<" capaActual "<<capaActual<< endl;
+	for (int position = 0; position < numNeuronas;position++){
+		// cout<<"position  "<<position<<endl;
+		Z += entrada[position] ;
 		// cout<<"despues de entrada "<<position<<endl;
-		Z+= theta [0][capaActual];//x[mantener][iterar]
-		// cout<<"despues DE THETA =  "<<pos<<endl;
+		Z+= theta [position][capaActual];//x[mantener][iterar]
+		// cout<<"despues DE THETA =  "<<position<<endl;
 	}
   H = 1.0/(1.0+exp(-Z));
-  // cout<<"H = "<<H<<" tamEntrada "<<tamEntrada<< endl;
   return H;
 }
 // void ForwardPropagation(double **theta1,double **theta2,double **theta3,int *cantidadNeuronasCapa,double **entrada,int *posicionRands, double **salida){
@@ -231,28 +231,53 @@ void ForwardCapa(double **theta, double *entrada, double *neuronasSigCapa,int nu
 	for (pos = 0; pos < numNeuronas;pos++){
 		ptrTheta = theta[capaActualTheta];
 		// ptrEntrada = entrada[capaActualTheta];
-		// cout<<"Invocando a H "<<pos<<endl;
-		neuronasSigCapa[pos] = getH(theta,entrada,capaActualTheta);
+
+		neuronasSigCapa[pos] = getH(theta,entrada,capaActualTheta,numNeuronas);
+		cout<<"Invocando a H "<<neuronasSigCapa[pos] <<endl;
 		capaActualTheta++;
 	}
-	 cout<<"Neuronas en la capa "<<pos<<" Cantidad de caracteristicas "<<N<<endl;
+	 cout<<"Neuronas en la capa "<<numNeuronas<<endl;
 }
 // ***** Cost() calcula el costo según la definición derivada
 // Se apolla de getH() al final no fue utilizada pero se deja por si en un
 // futuro sea requerida
 double Cost(double **theta,double *entrada,int capaActualTheta,double clasif){
-  double costo = 0.0;
-  double h = getH(theta,entrada,capaActualTheta);
-  if(clasif == 1){
-    costo = - log(h + eps);
-  }else{
-    costo = - log(1 - h + eps);
-  }
-  // cout<<"Costo = "<<costo<<endl;
-  return costo;
+  // double costo = 0.0;
+  // double h = getH(theta,entrada,capaActualTheta,3);
+  // if(clasif == 1){
+  //   costo = - log(h + eps);
+  // }else{
+  //   costo = - log(1 - h + eps);
+  // }
+  // // cout<<"Costo = "<<costo<<endl;
+  // return costo;
 }
-void ParameterVector(double **theta,double *entrada,int capaActualTheta,double *clasif){
+void ParameterVector(double **theta,double *entrada,double *clasif, int numNeuAct, int numNeuPrev){
+	double *gradiente = NULL;
+	gradiente = new double[numNeuAct];
+	double tempGradiente = 0;
+	double H = 0.0;
+	for(int j=0; j<numNeuAct; j++){//neurona en la que estamos
+			gradiente[j]=0;
+		for(int i= 0; i<numNeuPrev; i++){//Theta en al que estamos
+			for(int k=0; k<DATA; k++){//?????
+				theta[j][i] = theta[j][i]+eps;
+				H = getH(theta,entrada,j,numNeuAct );
+	 			gradiente[j] = double((clasif[i]*log(H+eps) + (1.0-clasif[i])*log(1.0-H+eps))+gradiente[j]);
+				theta[j][i] = theta[j][i]-2*eps;
+				gradiente[j] = double((clasif[i]*log(H+eps) + (1-clasif[i])*log(1-H+eps))+gradiente[j]);
+				theta[j][i] = theta[j][i]+eps;
+			}
+		}
+		gradiente[j] = (-(1.0/double(numNeuAct)))*(gradiente[j])/(2*eps);
 
+		//ACTUALIZACION DE THETAS
+		for(int i=0; i<numNeuPrev; i++){
+			theta[j][i] = gradiente[i];
+		}
+	}
+
+	delete[] gradiente;
 }
 // ***** getGradient() utilizada a Cost()
 // Al final ésta función no fue utilizada pero se deja por si en un futuro sea
