@@ -17,8 +17,8 @@ void getFromFile(char * archivo,double **x,double *clasif );
 void printPosX(double **x,double *clasif ,int pos);
 void getRands(int *posicion,int tam);
 void randTheta(double **thetas, int long1, int long2);
-double getH(double **theta, double **entrada,int capaActual);
-void ForwardPropagation(double **theta, double **entrada, double *neuronasSigCapa,int numNeuronas);
+double getH(double **theta, double *entrada,int capaActual);
+void ForwardCapa(double **theta, double *entrada, double *neuronasSigCapa,int numNeuronas);
 int main(int argc, char *argv[]) {
 	if (argc < 2){
     cerr << "Faltan Parámetros:\n\n\tUso: test <Archivo a leer>\n\n";
@@ -79,17 +79,13 @@ int main(int argc, char *argv[]) {
 	randTheta(thetas3, M*r + 1, M);
 
 
-	int *posicionRands = NULL;
-	posicionRands = new int[tamEntrada];
-	getRands(posicionRands,tamEntrada);
-	
-	const int miPos = pos -1;
-	for (int j = 0; j<N;j++)
-		cout<<x[miPos][j]<<", ";
-	cout<<clasif[miPos]<<endl;
-	
-	ForwardPropagation(thetas1, x[6], neuronas1, M*r*r);
-// ForwardPropagation(double **theta, double **entrada, int tamEntrada, double *neuronasSigCapa,int numNeuronas);
+	// int *posicionRands = NULL;
+	// posicionRands = new int[tamEntrada];
+	// getRands(posicionRands,tamEntrada);
+
+
+	ForwardCapa(thetas1, x[6], neuronas1, M*r*r);
+// ForwardCapa(double **theta, double **entrada, int tamEntrada, double *neuronasSigCapa,int numNeuronas);
 	for (int pos = 0; pos < DATA;pos++)
 		 delete[] x[pos];
 	delete[] x;
@@ -183,14 +179,14 @@ void getRands(int *posicion,int tam){
 	cout<<posicion[i]<<endl<<endl;}
 	delete[] arreglo;
 }
-double getH(double **theta, double **entrada, int capaActual){
+double getH(double **theta, double *entrada, int capaActual){
   double H = 0.0;
 	double Z = theta[0][capaActual];
 
 	for (int position = 0; position < N;position++){
-		cout<<"  "<<endl;
+		// cout<<"  "<<endl;
 		// Z += entrada[capaActual][0] ;
-		cout<<"despues de entrada "<<position<<endl;
+		// cout<<"despues de entrada "<<position<<endl;
 		Z+= theta [0][capaActual];//x[mantener][iterar]
 		// cout<<"despues DE THETA =  "<<pos<<endl;
 	}
@@ -198,24 +194,23 @@ double getH(double **theta, double **entrada, int capaActual){
   // cout<<"H = "<<H<<" tamEntrada "<<tamEntrada<< endl;
   return H;
 }
-// ForwardPropagation() funciona para una unica capa indicado por neuronasSigCapa
-void ForwardPropagation(double **theta, double **entrada, double *neuronasSigCapa,int numNeuronas){
+// ForwardCapa() funciona para una unica capa indicado por neuronasSigCapa
+void ForwardCapa(double **theta, double *entrada, double *neuronasSigCapa,int numNeuronas){
 	int capaActual = 0;
 	double *ptrTheta = NULL;//*ptrEntrada = NULL;
 	int capaActualTheta = 0;
+	int pos;
 	// for(int pos = 0; pos<N;pos++)
 	// 	cout<<"thetas1[pos][0] "<<thetas1[pos][0]<<endl;
 
-	for (int pos = 0; pos < numNeuronas;pos++){
+	for (pos = 0; pos < numNeuronas;pos++){
 		ptrTheta = theta[capaActualTheta];
 		// ptrEntrada = entrada[capaActualTheta];
 		cout<<"Invocando a H "<<pos<<endl;
 		neuronasSigCapa[pos] = getH(theta,entrada,capaActualTheta);
 		capaActualTheta++;
 	}
-	// cout<<"Neuronas en la capa "<<pos<<" Cantidad de caracteristicas "<<N<<endl;
-	// Liberación de memoria
-	delete[] posicionRands;
+	 cout<<"Neuronas en la capa "<<pos<<" Cantidad de caracteristicas "<<N<<endl;
 }
 // ***** Cost() calcula el costo según la definición derivada
 // Se apolla de getH() al final no fue utilizada pero se deja por si en un
